@@ -83,6 +83,8 @@ if generate_code_btn and query:
                 max_tokens=1  
             )
 
+        if not deepseek_response.choices or deepseek_response.choices[0].message is None:
+            raise ValueError("DeepSeek returned an empty or filtered response")
         reasoning_content = deepseek_response.choices[0].message.reasoning_content
         print("\nDeepseek Reasoning:\n", reasoning_content)
         with st.expander("R1's Reasoning"):      
@@ -144,8 +146,20 @@ elif generate_vis_btn:
                     browser_context=context
                 )
 
+                # FIX: The `code` parameter was previously never referenced inside
+                # any agent's task, so nothing actually told the browser agent
+                # what code to type into the editor. It's now interpolated
+                # directly into the coder agent's task, and the instruction is
+                # changed from "wait for the user to write the code" (passive)
+                # to an explicit action: click into the editor and type the code.
                 coder = Agent(
-                    task='Coder. Your job is to wait for the user for 10 seconds to write the code in the code editor.',
+                    task=(
+                        "Coder. Click into the Trinket code editor. Select all existing "
+                        "content (Ctrl+A) and delete it. Then paste the following Python "
+                        "code exactly as provided without modifying the formatting or "
+                        "indentation:\n\n"
+                        f"{code}"
+                    ),
                     llm=model,
                     browser_context=context
                 )
